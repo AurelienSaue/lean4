@@ -43,4 +43,9 @@ def isReducible {m} [Monad m] [MonadEnv m] (declName : Name) : m Bool := do
   | ReducibilityStatus.reducible => true
   | _ => false
 
+def isIrreducible {m} [Monad m] [MonadEnv m] (declName : Name) : m Bool := do
+  match ← getReducibilityStatus declName with
+  | ReducibilityStatus.irreducible => true
+  | _ => false
+
 end Lean

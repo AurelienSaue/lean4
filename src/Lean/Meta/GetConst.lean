@@ -10,7 +10,9 @@ namespace Lean.Meta
 private def getDefInfo (info : ConstantInfo) : MetaM (Option ConstantInfo) := do
   match (← read).config.transparency with
   | TransparencyMode.all => return some info
-  | TransparencyMode.default => return some info
+  | TransparencyMode.default =>
+    if (← isIrreducible info.name) then return none
+    else return  some info
   | m =>
     if (← isReducible info.name) then
       return some info

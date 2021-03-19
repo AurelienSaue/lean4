@@ -957,6 +957,9 @@ private def processAssignment' (mvarApp : Expr) (v : Expr) : MetaM Bool := do
 private def isDeltaCandidate? (t : Expr) : MetaM (Option ConstantInfo) := do
   match t.getAppFn with
   | Expr.const c _ _ =>
+    if (← isIrreducible c) ∧ not (← shouldReduceAll) then
+      trace[Meta.isDefEq.irreducible] "not unfolding {c}"
+      return none
     match (← getConst? c) with
     | r@(some info) => if info.hasValue then return r else return none
     | _             => return none
@@ -1407,5 +1410,6 @@ builtin_initialize
   registerTraceClass `Meta.isDefEq.delta
   registerTraceClass `Meta.isDefEq.step
   registerTraceClass `Meta.isDefEq.assign
+  registerTraceClass `Meta.isDefEq.irreducible
 
 end Lean.Meta
