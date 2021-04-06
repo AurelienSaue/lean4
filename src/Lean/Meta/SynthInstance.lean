@@ -480,7 +480,7 @@ partial def synth : SynthM (Option Expr) := do
 
 def main (type : Expr) (maxResultSize : Nat) : MetaM (Option Expr) :=
   withCurrHeartbeats <| traceCtx `Meta.synthInstance do
-     trace[Meta.synthInstance] "main goal {type}"
+     trace[Meta.synthInstance.mainGoal] "{type}"
      let mvar ← mkFreshExprMVar type
      let mctx ← getMCtx
      let key    := mkTableKey mctx type
@@ -645,10 +645,13 @@ builtin_initialize
 
 builtin_initialize
   registerTraceClass `Meta.synthInstance
+  registerTraceClass `Meta.synthInstance.mainGoal
   registerTraceClass `Meta.synthInstance.globalInstances
   registerTraceClass `Meta.synthInstance.newSubgoal
+  registerTraceClass `Meta.synthInstance.newAnswer
   registerTraceClass `Meta.synthInstance.tryResolve
   registerTraceClass `Meta.synthInstance.resume
   registerTraceClass `Meta.synthInstance.generate
+  registerTraceClass `Meta.synthInstance.discarded
 
 end Lean.Meta
