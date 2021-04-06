@@ -6,7 +6,7 @@
     [Meta.synthInstance.generate] instance instInhabitedNat
     [Meta.synthInstance.tryResolve] 
       [Meta.synthInstance.tryResolve] Inhabited Nat =?= Inhabited Nat
-      [Meta.synthInstance.tryResolve] success
+      [Meta.synthInstance.tryResolve] success (0 new subgoals)
     [Meta.synthInstance.newAnswer] size: 0, Inhabited Nat
     [Meta.synthInstance.newAnswer] val: instInhabitedNat
   [Meta.synthInstance] FOUND result instInhabitedNat

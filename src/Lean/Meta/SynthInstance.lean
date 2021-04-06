@@ -301,14 +301,24 @@ private partial def getSubgoalsAux (lctx : LocalContext) (localInsts : LocalInst
 def getSubgoals (lctx : LocalContext) (localInsts : LocalInstances) (xs : Array Expr) (inst : Expr) : MetaM SubgoalsResult := do
   let instType ← inferType inst
   let result ← getSubgoalsAux lctx localInsts xs #[] 0 [] inst instType
-  match inst.getAppFn with
-  | Expr.const constName _ _ =>
-    let env ← getEnv
-    if hasInferTCGoalsRLAttribute env constName then
-      pure result
+  result
+
+partial def shelveUnripeSubgoalsAux : List Expr → Array Expr → Array Expr → MetaM (Array Expr)
+  -- TODO: partial with `where` clause?
+  | [],      shelved, acc => pure $ acc ++ shelved
+  | (y::xs), shelved, acc => do
+    -- TODO: why `do` inside?
+    -- TODO: combine into one condition (but be careful about lifting)
+    if !(← instantiateMVars (← inferType y)).hasExprMVar then
+      shelveUnripeSubgoalsAux xs shelved (acc.push y)
+    else if ← (xs.anyM fun x => do y.occurs (← inferType x)) then do
+      trace[Meta.synthInstance.shelve] "{y} : {← instantiateMVars (← inferType y)}"
+      shelveUnripeSubgoalsAux xs (shelved.push y) acc
     else
-      pure { result with subgoals := result.subgoals.reverse }
-  | _ => pure result
+      shelveUnripeSubgoalsAux xs shelved (acc.push y)
+
+def shelveUnripeSubgoals (gs : List Expr) : MetaM (List Expr) := do
+  (← shelveUnripeSubgoalsAux gs.reverse #[] #[]).toList
 
 def tryResolveCore (mvar : Expr) (inst : Expr) : MetaM (Option (MetavarContext × List Expr)) := do
   let mvarType   ← inferType mvar
@@ -320,7 +330,10 @@ def tryResolveCore (mvar : Expr) (inst : Expr) : MetaM (Option (MetavarContext �
     if (← isDefEq mvarTypeBody instTypeBody) then
       let instVal ← mkLambdaFVars xs instVal
       if (← isDefEq mvar instVal) then
-        trace[Meta.synthInstance.tryResolve] "success"
+        trace[Meta.synthInstance.tryResolve] "success ({subgoals.length} new subgoals)"
+        let subgoals ← shelveUnripeSubgoals subgoals
+        for subgoal in subgoals do
+          trace[Meta.synthInstance.newSubgoals] "{← instantiateMVars (← inferType subgoal)}"
         pure (some ((← getMCtx), subgoals))
       else
         trace[Meta.synthInstance.tryResolve] "failure assigning"
@@ -650,5 +663,10 @@ builtin_initialize
   registerTraceClass `Meta.synthInstance.tryResolve
   registerTraceClass `Meta.synthInstance.resume
   registerTraceClass `Meta.synthInstance.generate
+  registerTraceClass `Meta.synthInstance.newSubgoals
+  registerTraceClass `Meta.synthInstance.newAnswer
+  registerTraceClass `Meta.synthInstance.discarded
+  registerTraceClass `Meta.synthInstance.shelve
+
 
 end Lean.Meta
