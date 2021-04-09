@@ -103,7 +103,7 @@ instance : HMod (Fin n) Nat (Fin n) where
 instance : OfNat (Fin (no_index (n+1))) i where
   ofNat := Fin.ofNat i
 
-theorem vneOfNe {i j : Fin n} (h : i ≠ j) : val i ≠ val j :=
+theorem vneOfNe {i j : Fin n} (h : i ≠ j) : i.val ≠ j.val :=
   fun h' => absurd (eqOfVeq h') h
 
 theorem modn_lt : ∀ {m : Nat} (i : Fin n), m > 0 → (i % m).val < m

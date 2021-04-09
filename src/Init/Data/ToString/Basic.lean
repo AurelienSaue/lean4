@@ -78,7 +78,7 @@ instance : ToString Char :=
   ⟨fun c => c.toString⟩
 
 instance (n : Nat) : ToString (Fin n) :=
-  ⟨fun f => toString (Fin.val f)⟩
+  ⟨fun f => toString f.val⟩
 
 instance : ToString UInt8 :=
   ⟨fun n => toString n.toNat⟩

@@ -35,7 +35,6 @@ deriving instance SizeOf for Option
 deriving instance SizeOf for List
 deriving instance SizeOf for Array
 deriving instance SizeOf for Subtype
-deriving instance SizeOf for Fin
 deriving instance SizeOf for USize
 deriving instance SizeOf for UInt8
 deriving instance SizeOf for UInt16

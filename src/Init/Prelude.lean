@@ -723,9 +723,7 @@ def System.Platform.numBits : Nat :=
 theorem System.Platform.numBitsEq : Or (Eq numBits 32) (Eq numBits 64) :=
   (getNumBits ()).property
 
-structure Fin (n : Nat) where
-  val  : Nat
-  isLt : Less val n
+def Fin (n : Nat) : Type := Subtype fun (val : Nat) => Less val n
 
 theorem Fin.eqOfVeq {n} : ∀ {i j : Fin n}, Eq i.val j.val → Eq i j
   | ⟨v, h⟩, ⟨_, _⟩, rfl => rfl
@@ -760,7 +758,7 @@ attribute [extern "lean_uint8_to_nat"] UInt8.val
 
 @[extern "lean_uint8_of_nat"]
 def UInt8.ofNatCore (n : @& Nat) (h : Less n UInt8.size) : UInt8 := {
-  val := { val := n, isLt := h }
+  val := { val := n, property := h }
 }
 
 set_option bootstrap.genMatcherCode false in
@@ -784,7 +782,7 @@ attribute [extern "lean_uint16_to_nat"] UInt16.val
 
 @[extern "lean_uint16_of_nat"]
 def UInt16.ofNatCore (n : @& Nat) (h : Less n UInt16.size) : UInt16 := {
-  val := { val := n, isLt := h }
+  val := { val := n, property := h }
 }
 
 set_option bootstrap.genMatcherCode false in
@@ -808,7 +806,7 @@ attribute [extern "lean_uint32_to_nat"] UInt32.val
 
 @[extern "lean_uint32_of_nat"]
 def UInt32.ofNatCore (n : @& Nat) (h : Less n UInt32.size) : UInt32 := {
-  val := { val := n, isLt := h }
+  val := { val := n, property := h }
 }
 
 @[extern "lean_uint32_to_nat"]
@@ -856,7 +854,7 @@ attribute [extern "lean_uint64_to_nat"] UInt64.val
 
 @[extern "lean_uint64_of_nat"]
 def UInt64.ofNatCore (n : @& Nat) (h : Less n UInt64.size) : UInt64 := {
-  val := { val := n, isLt := h }
+  val := { val := n, property := h }
 }
 
 set_option bootstrap.genMatcherCode false in
@@ -887,7 +885,7 @@ attribute [extern "lean_usize_to_nat"] USize.val
 
 @[extern "lean_usize_of_nat"]
 def USize.ofNatCore (n : @& Nat) (h : Less n USize.size) : USize := {
-  val := { val := n, isLt := h }
+  val := { val := n, property := h }
 }
 
 set_option bootstrap.genMatcherCode false in
@@ -908,7 +906,7 @@ instance : Inhabited USize where
 def USize.ofNat32 (n : @& Nat) (h : Less n 4294967296) : USize := {
   val := {
     val  := n
-    isLt := match USize.size, usizeSzEq with
+    property := match USize.size, usizeSzEq with
       | _, Or.inl rfl => h
       | _, Or.inr rfl => Nat.ltTrans h (by decide)
   }
@@ -933,13 +931,13 @@ private theorem validCharIsUInt32 {n : Nat} (h : n.isValidChar) : Less n UInt32.
 
 @[extern "lean_uint32_of_nat"]
 private def Char.ofNatAux (n : @& Nat) (h : n.isValidChar) : Char :=
-  { val := ⟨{ val := n, isLt := validCharIsUInt32 h }⟩, valid := h }
+  { val := ⟨{ val := n, property := validCharIsUInt32 h }⟩, valid := h }
 
 @[noinline, matchPattern]
 def Char.ofNat (n : Nat) : Char :=
   dite (n.isValidChar)
     (fun h => Char.ofNatAux n h)
-    (fun _ => { val := ⟨{ val := 0, isLt := by decide }⟩, valid := Or.inl (by decide) })
+    (fun _ => { val := ⟨{ val := 0, property := by decide }⟩, valid := Or.inl (by decide) })
 
 theorem Char.eqOfVeq : ∀ {c d : Char}, Eq c.val d.val → Eq c d
   | ⟨v, h⟩, ⟨_, _⟩, rfl => rfl
@@ -1117,7 +1115,7 @@ def Array.size {α : Type u} (a : @& Array α) : Nat :=
 
 @[extern "lean_array_fget"]
 def Array.get {α : Type u} (a : @& Array α) (i : @& Fin a.size) : α :=
-  a.data.get i.val i.isLt
+  a.data.get i.val i.property
 
 @[inline] def Array.getD (a : Array α) (i : Nat) (v₀ : α) : α :=
   dite (Less i a.size) (fun h => a.get ⟨i, h⟩) (fun _ => v₀)
