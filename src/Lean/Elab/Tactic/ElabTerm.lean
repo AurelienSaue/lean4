@@ -15,14 +15,14 @@ open Meta
 
 /- `elabTerm` for Tactics and basic tactics that use it. -/
 
-def elabTerm (stx : Syntax) (expectedType? : Option Expr) (mayPostpone := false) : TacticM Expr :=
+def elabTerm (stx : Syntax) (expectedType? : Option Expr) (mayPostpone := false) (implicitLambda := true) : TacticM Expr :=
   withRef stx <| Term.withoutErrToSorry do
-    let e ← Term.elabTerm stx expectedType?
+    let e ← Term.elabTerm stx expectedType? (implicitLambda := implicitLambda)
     Term.synthesizeSyntheticMVars mayPostpone
     instantiateMVars e
 
-def elabTermEnsuringType (stx : Syntax) (expectedType? : Option Expr) (mayPostpone := false) : TacticM Expr := do
-  let e ← elabTerm stx expectedType? mayPostpone
+def elabTermEnsuringType (stx : Syntax) (expectedType? : Option Expr) (mayPostpone := false) (implicitLambda := true) : TacticM Expr := do
+  let e ← elabTerm stx expectedType? mayPostpone (implicitLambda := implicitLambda)
   -- We do use `Term.ensureExpectedType` because we don't want coercions being inserted here.
   match expectedType? with
   | none => return e
@@ -39,11 +39,11 @@ def closeMainGoalUsing (x : Expr → TacticM Expr) : TacticM Unit :=
 
 @[builtinTactic «exact»] def evalExact : Tactic := fun stx =>
   match stx with
-  | `(tactic| exact $e) => closeMainGoalUsing (fun type => elabTermEnsuringType e type)
+  | `(tactic| exact $e) => closeMainGoalUsing (fun type => elabTermEnsuringType e type (implicitLambda := false))
   | _                   => throwUnsupportedSyntax
 
-def elabTermWithHoles (stx : Syntax) (expectedType? : Option Expr) (tagSuffix : Name) (allowNaturalHoles := false) : TacticM (Expr × List MVarId) := do
-  let val ← elabTermEnsuringType stx expectedType?
+def elabTermWithHoles (stx : Syntax) (expectedType? : Option Expr) (tagSuffix : Name) (allowNaturalHoles := false) (implicitLambda := true) : TacticM (Expr × List MVarId) := do
+  let val ← elabTermEnsuringType stx expectedType? (implicitLambda := implicitLambda)
   let newMVarIds ← getMVarsNoDelayed val
   /- ignore let-rec auxiliary variables, they are synthesized automatically later -/
   let newMVarIds ← newMVarIds.filterM fun mvarId => return !(← Term.isLetRecAuxMVar mvarId)
@@ -64,7 +64,7 @@ def elabTermWithHoles (stx : Syntax) (expectedType? : Option Expr) (tagSuffix : 
    "Synthetic" metavariables are meant to be filled by tactics and are usually created using the synthetic hole notation `?<hole-name>`. -/
 def refineCore (stx : Syntax) (tagSuffix : Name) (allowNaturalHoles : Bool) : TacticM Unit := do
   withMainContext do
-    let (val, mvarIds') ← elabTermWithHoles stx (← getMainTarget) tagSuffix allowNaturalHoles
+    let (val, mvarIds') ← elabTermWithHoles stx (← getMainTarget) tagSuffix allowNaturalHoles (implicitLambda := false)
     assignExprMVar (← getMainGoal) val
     replaceMainGoal mvarIds'
 
