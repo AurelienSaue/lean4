@@ -143,7 +143,7 @@ def delabAppImplicit : Delab := whenNotPPOption getPPExplicit do
       let (argKind, skippedOptParam) := match paramKinds with
         | ParamKind.implicit n (some v) :: _ =>
           if !v.hasLooseBVars && v == arg then (ArgKind.implicit, true)
-          else if skippedOptParam then (ArgKind.named n, false)
+          else if skippedOptParam then (ArgKind.named n, skippedOptParam)
           else (ArgKind.explicit, skippedOptParam)
         | ParamKind.implicit n none :: _  =>
           -- TODO: check if it is actually dependent
