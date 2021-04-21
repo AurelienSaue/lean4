@@ -134,6 +134,7 @@ def delabAppImplicit : Delab := whenNotPPOption getPPExplicit do
       pure (stx, paramKinds.toList, #[], false))
     (fun (fnStx, paramKinds, argStxs, skippedOptParam) => do
       let arg ← getExpr
+      println! "[arg] {arg}"
       let opts ← MonadOptions.getOptions
       let (argKind, skippedOptParam) := match paramKinds with
         | ParamKind.implicit n (some v) :: _ =>
