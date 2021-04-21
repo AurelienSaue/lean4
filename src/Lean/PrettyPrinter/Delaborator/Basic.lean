@@ -96,6 +96,12 @@ register_builtin_option pp.safe_shadowing  : Bool := {
   group    := "pp"
   descr    := "(pretty printer) allow variable shadowing if there is no collision"
 }
+register_builtin_option pp.dependent_motives : Bool := {
+  defValue := false
+  group    := "pp"
+  descr    := "(pretty printer) display all dependent motives"
+}
+
 -- TODO:
 /-
 register_builtin_option g_pp_max_depth : Nat := {
@@ -163,6 +169,7 @@ def getPPFullNames (o : Options) : Bool := o.get `pp.full_names (getPPAll o)
 def getPPPrivateNames (o : Options) : Bool := o.get `pp.private_names (getPPAll o)
 def getPPUnicode (o : Options) : Bool := o.get `pp.unicode true
 def getPPSafeShadowing (o : Options) : Bool := o.get `pp.safe_shadowing true
+def getPPDependentMotives (o : Options) : Bool := o.get `pp.dependent_motives (getPPAll o)
 
 /-- Associate pretty printer options to a specific subterm using a synthetic position. -/
 abbrev OptionsPerPos := Std.RBMap Nat Options (fun a b => a < b)

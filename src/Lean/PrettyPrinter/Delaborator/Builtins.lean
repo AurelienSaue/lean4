@@ -89,7 +89,7 @@ def delabConst : Delab := do
 inductive ParamKind where
   | explicit
   -- combines implicit params, optParams, and autoParams
-  | implicit (defVal : Option Expr)
+  | implicit (name : Name) (defVal : Option Expr)
 
 /-- Return array with n-th element set to kind of n-th parameter of `e`. -/
 def getParamKinds (e : Expr) : MetaM (Array ParamKind) := do
@@ -98,10 +98,10 @@ def getParamKinds (e : Expr) : MetaM (Array ParamKind) := do
     params.mapM fun param => do
       let l ← getLocalDecl param.fvarId!
       match l.type.getOptParamDefault? with
-      | some val => pure $ ParamKind.implicit val
+      | some val => pure $ ParamKind.implicit l.userName val
       | _ =>
         if l.type.isAutoParam || !l.binderInfo.isExplicit then
-          pure $ ParamKind.implicit none
+          pure $ ParamKind.implicit l.userName none
         else
           pure ParamKind.explicit
 
@@ -119,25 +119,43 @@ def delabAppExplicit : Delab := do
       pure (fnStx, argStxs.push argStx))
   Syntax.mkApp fnStx argStxs
 
+inductive ArgKind : Type
+  | explicit
+  | implicit
+  | named (n : Name)
+
 @[builtinDelab app]
 def delabAppImplicit : Delab := whenNotPPOption getPPExplicit do
-  let (fnStx, _, argStxs) ← withAppFnArgs
+  let (fnStx, _, argStxs, _) ← withAppFnArgs
     (do
       let fn ← getExpr
       let stx ← if fn.isConst then delabConst else delab
       let paramKinds ← liftM (getParamKinds fn <|> pure #[])
-      pure (stx, paramKinds.toList, #[]))
-    (fun (fnStx, paramKinds, argStxs) => do
-      let arg ← getExpr;
-      let implicit : Bool := match paramKinds with -- TODO: check why we need `: Bool` here
-        | [ParamKind.implicit (some v)] => !v.hasLooseBVars && v == arg
-        | ParamKind.implicit none :: _  => true
-        | _                             => false
-      if implicit then
-        pure (fnStx, paramKinds.tailD [], argStxs)
-      else do
+      pure (stx, paramKinds.toList, #[], false))
+    (fun (fnStx, paramKinds, argStxs, skippedOptParam) => do
+      let arg ← getExpr
+      let opts ← MonadOptions.getOptions
+      let (argKind, skippedOptParam) := match paramKinds with
+        | ParamKind.implicit n (some v) :: _ =>
+          if !v.hasLooseBVars && v == arg then
+            if !skippedOptParam then (ArgKind.implicit, true) else (ArgKind.named n, false)
+          else (ArgKind.explicit, skippedOptParam)
+        | ParamKind.implicit n none :: _  =>
+          -- TODO: check if it is actually dependent
+          if getPPDependentMotives opts && n == `motive then
+            (ArgKind.named n, skippedOptParam)
+          else (ArgKind.implicit, skippedOptParam)
+        | _                             => (ArgKind.explicit, skippedOptParam)
+      match argKind with
+      | ArgKind.explicit => do
         let argStx ← delab
-        pure (fnStx, paramKinds.tailD [], argStxs.push argStx))
+        pure (fnStx, paramKinds.tailD [], argStxs.push argStx, skippedOptParam)
+      | ArgKind.implicit => do
+        pure (fnStx, paramKinds.tailD [], argStxs, skippedOptParam)
+      | ArgKind.named n => do
+        let argStx : Syntax ← delab
+        let argStx ← `(Parser.Term.namedArgument| ($(← mkIdent n):ident := $argStx:term))
+        pure (fnStx, paramKinds.tailD [], argStxs.push argStx, skippedOptParam))
   Syntax.mkApp fnStx argStxs
 
 @[builtinDelab app]
