@@ -124,6 +124,11 @@ inductive ArgKind : Type
   | implicit
   | named (n : Name)
 
+def looksAtArguments (arg : Expr) : Bool :=
+  match arg with
+  | Expr.lam name d b _ => b.hasLooseBVars || looksAtArguments b
+  | _ => false
+
 @[builtinDelab app]
 def delabAppImplicit : Delab := whenNotPPOption getPPExplicit do
   let (fnStx, _, argStxs, _) ← withAppFnArgs
@@ -134,16 +139,15 @@ def delabAppImplicit : Delab := whenNotPPOption getPPExplicit do
       pure (stx, paramKinds.toList, #[], false))
     (fun (fnStx, paramKinds, argStxs, skippedOptParam) => do
       let arg ← getExpr
-      println! "[arg] {arg}"
       let opts ← MonadOptions.getOptions
       let (argKind, skippedOptParam) := match paramKinds with
         | ParamKind.implicit n (some v) :: _ =>
-          if !v.hasLooseBVars && v == arg then
-            if !skippedOptParam then (ArgKind.implicit, true) else (ArgKind.named n, false)
+          if !v.hasLooseBVars && v == arg then (ArgKind.implicit, true)
+          else if skippedOptParam then (ArgKind.named n, false)
           else (ArgKind.explicit, skippedOptParam)
         | ParamKind.implicit n none :: _  =>
           -- TODO: check if it is actually dependent
-          if getPPDependentMotives opts && n == `motive then
+          if n == `motive && ((getPPDependentMotives opts && looksAtArguments arg) || (getPPMotives opts)) then
             (ArgKind.named n, skippedOptParam)
           else (ArgKind.implicit, skippedOptParam)
         | _                             => (ArgKind.explicit, skippedOptParam)
