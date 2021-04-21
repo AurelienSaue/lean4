@@ -106,6 +106,11 @@ register_builtin_option pp.dependent_motives : Bool := {
   group    := "pp"
   descr    := "(pretty printer) display all dependent motives"
 }
+register_builtin_option pp.pi_match_types : Bool := {
+  defValue := false
+  group    := "pp"
+  descr    := "(pretty printer) display pi match types"
+}
 
 -- TODO:
 /-
@@ -176,6 +181,7 @@ def getPPUnicode (o : Options) : Bool := o.get `pp.unicode true
 def getPPSafeShadowing (o : Options) : Bool := o.get `pp.safe_shadowing true
 def getPPMotives (o : Options) : Bool := o.get `pp.motives false
 def getPPDependentMotives (o : Options) : Bool := o.get `pp.dependent_motives (getPPMotives o)
+def getPPPiMatchTypes (o : Options) : Bool := o.get `pp.pi_match_types (getPPAll o)
 
 /-- Associate pretty printer options to a specific subterm using a synthetic position. -/
 abbrev OptionsPerPos := Std.RBMap Nat Options (fun a b => a < b)

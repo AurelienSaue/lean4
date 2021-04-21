@@ -356,7 +356,12 @@ def delabLam : Delab :=
       Elab.Term.blockImplicitLambda stxBody ||
       curNames.any (fun n => hasIdent n.getId stxBody);
     if !blockImplicitLambda then
-      pure stxBody
+      if e.binderInfo == BinderInfo.instImplicit then
+        match stxBody with
+        | `(fun $binderGroups* => $stxBody) => `(fun _ $binderGroups* => $stxBody)
+        | _                                 => `(fun _ => $stxBody)
+      else
+        pure stxBody
     else
       let group ← match e.binderInfo, ppTypes with
         | BinderInfo.default,     true   =>
